@@ -10,6 +10,7 @@ For the latter there are two states "editor only" and "sidebar with table maximi
 """
 copyright 2019 ijgnd
           2015-2018 Glutanimate  <https://glutanimate.com/>
+          2018 Arthur Milchior
 
 I took some files from the add-on "Frozen Fields" and adjusted some functions
 form browser_search_highlight_results.py.
@@ -31,7 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from aqt.browser import Browser
 from anki.hooks import addHook, wrap
 from aqt.qt import *
-
+from aqt import mw
 
 from .config import config
 from .consts import *
@@ -50,15 +51,17 @@ def mysetupTable(self):
     self.form.fieldsArea.setMinimumSize(50,1)
     self.form.widget.setMinimumSize(50,1)
     self.extremestate = 0   # for toggling views
+    self.advbrowse_uniqueNote_state_original = mw.col.conf.get("advbrowse_uniqueNote", False)
+
 
     if config.get("splitter_bigger",False):
         #https://doc.qt.io/archives/qt-4.8/stylesheet-examples.html#customizing-qsplitter via https://stackoverflow.com/questions/15382588/qsplitter-handle-bar
         #https://stackoverflow.com/questions/44924036/customize-qsplitter-handle-color
         splitterstylesheet = """
-        QSplitter::handle:vertical {  
+        QSplitter::handle:vertical {
             height: 15px;
         }
-        QSplitter::handle:horizontal { 
+        QSplitter::handle:horizontal {
             height: 15px;
         }
         //QSplitter::handle
@@ -70,29 +73,45 @@ def mysetupTable(self):
 Browser.setupTable = wrap(Browser.setupTable,mysetupTable,"before")
 
 
+def my_toggle_notes_only(self, arg):
+    self.model.beginReset()
+    mw.col.conf["advbrowse_uniqueNote"] =  arg
+    if anki20:
+        self.onSearch()
+    else:
+        self.onSearchActivated()
+    self.model.endReset()
+Browser.my_toggle_notes_only = my_toggle_notes_only
+
+
 def editor_only(self):
-    # don't hide the table via  self.form.widget.setVisible(False) so 
+    #note only
+    self.advbrowse_uniqueNote_state_original = mw.col.conf["advbrowse_uniqueNote"]
+    self.my_toggle_notes_only(True)
+    # don't hide the table via  self.form.widget.setVisible(False) so
     # that I can restore by dragging the splitter
     if anki20:
         if self.form.tree.isVisible():
             self.form.tree.hide()
-    elif self.sidebarDockWidget.isVisible():
-        self.sidebarDockWidget.setVisible(False)
-    sh = self.form.splitter.size().height()  
-    self.form.splitter.setSizes([ sh * 0.1, sh * 0.99])  #https://stackoverflow.com/a/47843697 
+    else:
+        if self.sidebarDockWidget.isVisible():
+            self.sidebarDockWidget.setVisible(False)
+    sh = self.form.splitter.size().height()
+    self.form.splitter.setSizes([ sh * 0.1, sh * 0.99])  #https://stackoverflow.com/a/47843697
     self.extremestate = 1
 Browser.editor_only = editor_only
 
 
 def table_only(self):
-    # don't hide the editor via  self.form.fieldsArea.setVisible(False) so 
+    self.my_toggle_notes_only(self.advbrowse_uniqueNote_state_original)
+    # don't hide the editor via  self.form.fieldsArea.setVisible(False) so
     # that I can restore by dragging the splitter
     # ---
     # it's not enough to hide self.tableView because tableView and the search bar
-    # are in a widget. If I hide the tableView this widget will only hold the 
-    # search bar and a lot of grey space. 
-    sh = self.form.splitter.size().height()  
-    self.form.splitter.setSizes([ sh * 0.99, sh * 0.01])  #https://stackoverflow.com/a/47843697 
+    # are in a widget. If I hide the tableView this widget will only hold the
+    # search bar and a lot of grey space.
+    sh = self.form.splitter.size().height()
+    self.form.splitter.setSizes([ sh * 0.99, sh * 0.01])  #https://stackoverflow.com/a/47843697
     self.extremestate = 0
     if anki20:
         if self.form.tree.isVisible():
@@ -102,17 +121,17 @@ def table_only(self):
     #works but can't resize manually
     #self.form.fieldsArea.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
     #self.form.widget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
-    
+
     #works but can't resize manually
     #self.form.fieldsArea.setFixedHeight(1)
     #self.form.widget.setFixedHeight(sh-1)
-    
+
     #this has no effect:
     #self.form.splitter.setStretchFactor(100,1)
-    
+
     #doesn't work
     #sw = self.form.splitter.size().width()
-    #self.form.widget.resize(sw,sh) 
+    #self.form.widget.resize(sw,sh)
 Browser.table_only = table_only
 
 
@@ -127,19 +146,26 @@ Browser.toggle_extremes = toggle_extremes
 
 
 def back_to_default20(self):
+    self.my_toggle_notes_only(self.advbrowse_uniqueNote_state_original)
+    mw.col.conf["advbrowse_uniqueNote"] =  self.advbrowse_uniqueNote_state_original
+    
     self.form.tree.show()
-    sh = self.form.splitter.size().height()  
-    self.form.splitter.setSizes([ sh * 0.5, sh * 0.5])  #https://stackoverflow.com/a/47843697   
+    sh = self.form.splitter.size().height()
+    self.form.splitter.setSizes([ sh * 0.5, sh * 0.5])  #https://stackoverflow.com/a/47843697
+
 
 def back_to_default21(self):
+    self.my_toggle_notes_only(self.advbrowse_uniqueNote_state_original)
+    mw.col.conf["advbrowse_uniqueNote"] =  self.advbrowse_uniqueNote_state_original
+
     if not self.form.widget.isVisible():
         self.form.widget.setVisible(True)
     if not self.form.fieldsArea.isVisible():
         self.form.fieldsArea.setVisible(True)
     if not self.sidebarDockWidget.isVisible():
         self.sidebarDockWidget.setVisible(True)
-    sh = self.form.splitter.size().height()  
-    self.form.splitter.setSizes([ sh * 0.5, sh * 0.5])  #https://stackoverflow.com/a/47843697 
+    sh = self.form.splitter.size().height()
+    self.form.splitter.setSizes([ sh * 0.5, sh * 0.5])  #https://stackoverflow.com/a/47843697
 
 if anki20:
     Browser.back_to_default = back_to_default20
@@ -149,15 +175,15 @@ else:
 
 def my_toggle_sidebar20(self):
     if self.form.tree.isVisible():
-        self.form.tree.hide() 
+        self.form.tree.hide()
     else:
         self.form.tree.show()
 
 def my_toggle_sidebar21(self):
     if not self.sidebarDockWidget.isVisible():
-        self.sidebarDockWidget.setVisible(True) 
+        self.sidebarDockWidget.setVisible(True)
     else:
-        self.sidebarDockWidget.setVisible(False) 
+        self.sidebarDockWidget.setVisible(False)
 
 if anki20:
     Browser.my_toggle_sidebar = my_toggle_sidebar20
