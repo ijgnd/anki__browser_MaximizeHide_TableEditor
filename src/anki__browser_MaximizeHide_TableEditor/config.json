@@ -4,5 +4,5 @@
     "hotkey_table_only":"Alt+4",
     "hotkey_toggle_sidebar":"Alt+5",
     "hotkey_back_to_default":"Alt+6",
-    "splitter_bigger": true
+    "splitter_bigger": 22
 }

@@ -53,23 +53,12 @@ def mysetupTable(self):
     self.extremestate = 0   # for toggling views
     self.advbrowse_uniqueNote_state_original = mw.col.conf.get("advbrowse_uniqueNote", False)
 
-
     if config.get("splitter_bigger",False):
-        #https://doc.qt.io/archives/qt-4.8/stylesheet-examples.html#customizing-qsplitter via https://stackoverflow.com/questions/15382588/qsplitter-handle-bar
-        #https://stackoverflow.com/questions/44924036/customize-qsplitter-handle-color
-        splitterstylesheet = """
-        QSplitter::handle:vertical {
-            height: 15px;
-        }
-        QSplitter::handle:horizontal {
-            height: 15px;
-        }
-        //QSplitter::handle
-        //{
-        //    background-color: rgb(127, 127, 127);
-        //}
-    """
-    self.form.splitter.setStyleSheet(splitterstylesheet)
+        val = config["splitter_bigger"]
+        #test for old config style that just had True and False
+        if bool(val):
+            val = 20
+        self.form.splitter.setHandleWidth(val)
 Browser.setupTable = wrap(Browser.setupTable,mysetupTable,"before")
 
 
