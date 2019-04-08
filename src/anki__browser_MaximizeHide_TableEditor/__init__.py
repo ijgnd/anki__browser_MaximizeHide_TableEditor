@@ -1,1 +1,1 @@
-from . import main
+from . import browser_MaximizeHide_TableEditor
