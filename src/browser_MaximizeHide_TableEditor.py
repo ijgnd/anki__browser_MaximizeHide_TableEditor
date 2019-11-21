@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 """
 there are two states: "default browser view" and "focus on one element".
 For the latter there are two states "editor only" and "sidebar with table maximized".
@@ -31,12 +28,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from aqt.browser import Browser
 from anki.hooks import addHook, wrap
+from anki.lang import _
 from aqt.qt import *
 from aqt import mw
-
-from .config import config
-from .consts import *
-
 
 
 """
@@ -46,6 +40,9 @@ there is no hide() method. So I skip hiding the BrowserToolbar.
 """
 
 
+def gc(arg, fail=False):
+    return mw.addonManager.getConfig(__name__).get(arg, fail)
+
 
 def mysetupTable(self):
     self.form.fieldsArea.setMinimumSize(50,1)
@@ -53,8 +50,8 @@ def mysetupTable(self):
     self.extremestate = 0   # for toggling views
     self.advbrowse_uniqueNote_state_original = mw.col.conf.get("advbrowse_uniqueNote", False)
 
-    if config.get("splitter_bigger",False):
-        val = config["splitter_bigger"]
+    val = gc("splitter_bigger", False)
+    if val:
         #test for old config style that just had True and False
         if bool(val):
             val = 20
@@ -65,26 +62,17 @@ Browser.setupTable = wrap(Browser.setupTable,mysetupTable,"before")
 def my_toggle_notes_only(self, arg):
     self.model.beginReset()
     mw.col.conf["advbrowse_uniqueNote"] =  arg
-    if anki20:
-        self.onSearch()
-    else:
-        self.onSearchActivated()
+    self.onSearchActivated()
     self.model.endReset()
 Browser.my_toggle_notes_only = my_toggle_notes_only
 
 
 def editor_only(self):
     #note only
-    self.advbrowse_uniqueNote_state_original = mw.col.conf["advbrowse_uniqueNote"]
+    self.advbrowse_uniqueNote_state_original = mw.col.conf.get("advbrowse_uniqueNote", False)
     self.my_toggle_notes_only(True)
-    # don't hide the table via  self.form.widget.setVisible(False) so
-    # that I can restore by dragging the splitter
-    if anki20:
-        if self.form.tree.isVisible():
-            self.form.tree.hide()
-    else:
-        if self.sidebarDockWidget.isVisible():
-            self.sidebarDockWidget.setVisible(False)
+    if self.sidebarDockWidget.isVisible():
+        self.sidebarDockWidget.setVisible(False)
     sh = self.form.splitter.size().height()
     self.form.splitter.setSizes([ sh * 0.1, sh * 0.99])  #https://stackoverflow.com/a/47843697
     self.extremestate = 1
@@ -102,10 +90,7 @@ def table_only(self):
     sh = self.form.splitter.size().height()
     self.form.splitter.setSizes([ sh * 0.99, sh * 0.01])  #https://stackoverflow.com/a/47843697
     self.extremestate = 0
-    if anki20:
-        if self.form.tree.isVisible():
-            self.form.tree.hide()
-    elif self.sidebarDockWidget.isVisible():
+    if self.sidebarDockWidget.isVisible():
         self.sidebarDockWidget.setVisible(False)
     #works but can't resize manually
     #self.form.fieldsArea.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -134,15 +119,6 @@ def toggle_extremes(self):
 Browser.toggle_extremes = toggle_extremes
 
 
-def back_to_default20(self):
-    self.my_toggle_notes_only(self.advbrowse_uniqueNote_state_original)
-    mw.col.conf["advbrowse_uniqueNote"] =  self.advbrowse_uniqueNote_state_original
-    
-    self.form.tree.show()
-    sh = self.form.splitter.size().height()
-    self.form.splitter.setSizes([ sh * 0.5, sh * 0.5])  #https://stackoverflow.com/a/47843697
-
-
 def back_to_default21(self):
     self.my_toggle_notes_only(self.advbrowse_uniqueNote_state_original)
     mw.col.conf["advbrowse_uniqueNote"] =  self.advbrowse_uniqueNote_state_original
@@ -155,29 +131,15 @@ def back_to_default21(self):
         self.sidebarDockWidget.setVisible(True)
     sh = self.form.splitter.size().height()
     self.form.splitter.setSizes([ sh * 0.5, sh * 0.5])  #https://stackoverflow.com/a/47843697
+Browser.back_to_default = back_to_default21
 
-if anki20:
-    Browser.back_to_default = back_to_default20
-else:
-    Browser.back_to_default = back_to_default21
-
-
-def my_toggle_sidebar20(self):
-    if self.form.tree.isVisible():
-        self.form.tree.hide()
-    else:
-        self.form.tree.show()
 
 def my_toggle_sidebar21(self):
     if not self.sidebarDockWidget.isVisible():
         self.sidebarDockWidget.setVisible(True)
     else:
         self.sidebarDockWidget.setVisible(False)
-
-if anki20:
-    Browser.my_toggle_sidebar = my_toggle_sidebar20
-else:
-    Browser.my_toggle_sidebar = my_toggle_sidebar21
+Browser.my_toggle_sidebar = my_toggle_sidebar21
 
 
 def onSetupMenus(self):
@@ -194,21 +156,21 @@ def onSetupMenus(self):
     #to see if the table view is hidden ...
     a = m.addAction('editor only')
     a.triggered.connect(self.editor_only)
-    a.setShortcut(QKeySequence(config.get("hotkey_editor_only","")))
+    a.setShortcut(QKeySequence(gc("hotkey_editor_only","")))
 
     a = m.addAction('table only')
     a.triggered.connect(self.table_only)
-    a.setShortcut(QKeySequence(config.get("hotkey_table_only","")))
+    a.setShortcut(QKeySequence(gc("hotkey_table_only","")))
 
     a = m.addAction('toggle between "only table/sidebar" and "only editor"')
     a.triggered.connect(self.toggle_extremes)
-    a.setShortcut(QKeySequence(config.get("hotkey_toggle","")))
+    a.setShortcut(QKeySequence(gc("hotkey_toggle","")))
 
     a = m.addAction('toggle sidebar')
     a.triggered.connect(self.my_toggle_sidebar)
-    a.setShortcut(QKeySequence(config.get("hotkey_toggle_sidebar","")))
+    a.setShortcut(QKeySequence(gc("hotkey_toggle_sidebar","")))
 
     a = m.addAction('reset to default')
     a.triggered.connect(self.back_to_default)
-    a.setShortcut(QKeySequence(config.get("hotkey_back_to_default","")))
+    a.setShortcut(QKeySequence(gc("hotkey_back_to_default","")))
 addHook("browser.setupMenus", onSetupMenus)
