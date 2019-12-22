@@ -33,12 +33,6 @@ from aqt.qt import *
 from aqt import mw
 
 
-"""
-BrowserToolbar (with Add,Info,Mark,...) from 2.0 is not in 2.1
-so hiding this would only be relevant in 2.0
-there is no hide() method. So I skip hiding the BrowserToolbar.
-"""
-
 
 def gc(arg, fail=False):
     return mw.addonManager.getConfig(__name__).get(arg, fail)
@@ -67,13 +61,27 @@ def my_toggle_notes_only(self, arg):
 Browser.my_toggle_notes_only = my_toggle_notes_only
 
 
+def get_splitter_dimension(self):
+    # bett compatibility with "browser side-by-side (horizontal split)"
+    # https://ankiweb.net/shared/info/831846358
+    try:
+        if self.side_by_side:
+            sh = self.form.splitter.size().width()
+        else:
+            sh = self.form.splitter.size().height()
+    except:
+        sh = self.form.splitter.size().height()
+    return sh
+Browser.get_splitter_dimension = get_splitter_dimension
+
+
 def editor_only(self):
     #note only
     self.advbrowse_uniqueNote_state_original = mw.col.conf.get("advbrowse_uniqueNote", False)
     self.my_toggle_notes_only(True)
     if self.sidebarDockWidget.isVisible():
         self.sidebarDockWidget.setVisible(False)
-    sh = self.form.splitter.size().height()
+    sh = self.get_splitter_dimension()
     self.form.splitter.setSizes([ sh * 0.1, sh * 0.99])  #https://stackoverflow.com/a/47843697
     self.extremestate = 1
 Browser.editor_only = editor_only
@@ -87,7 +95,7 @@ def table_only(self):
     # it's not enough to hide self.tableView because tableView and the search bar
     # are in a widget. If I hide the tableView this widget will only hold the
     # search bar and a lot of grey space.
-    sh = self.form.splitter.size().height()
+    sh = self.get_splitter_dimension()
     self.form.splitter.setSizes([ sh * 0.99, sh * 0.01])  #https://stackoverflow.com/a/47843697
     self.extremestate = 0
     if self.sidebarDockWidget.isVisible():
@@ -119,7 +127,7 @@ def toggle_extremes(self):
 Browser.toggle_extremes = toggle_extremes
 
 
-def back_to_default21(self):
+def back_to_default(self):
     self.my_toggle_notes_only(self.advbrowse_uniqueNote_state_original)
     mw.col.conf["advbrowse_uniqueNote"] =  self.advbrowse_uniqueNote_state_original
 
@@ -129,24 +137,24 @@ def back_to_default21(self):
         self.form.fieldsArea.setVisible(True)
     if not self.sidebarDockWidget.isVisible():
         self.sidebarDockWidget.setVisible(True)
-    sh = self.form.splitter.size().height()
+    sh = self.get_splitter_dimension()
     self.form.splitter.setSizes([ sh * 0.5, sh * 0.5])  #https://stackoverflow.com/a/47843697
-Browser.back_to_default = back_to_default21
+Browser.back_to_default = back_to_default
 
 
-def my_toggle_sidebar21(self):
+def my_toggle_sidebar(self):
     if not self.sidebarDockWidget.isVisible():
         self.sidebarDockWidget.setVisible(True)
     else:
         self.sidebarDockWidget.setVisible(False)
-Browser.my_toggle_sidebar = my_toggle_sidebar21
+Browser.my_toggle_sidebar = my_toggle_sidebar
 
 
 def onSetupMenus(self):
     try:
         m = self.menuView
     except:
-        self.menuView = QMenu(_("&View"))
+        self.menuView = QMenu("&View")
         action = self.menuBar().insertMenu(
             self.mw.form.menuTools.menuAction(), self.menuView)
         m = self.menuView
