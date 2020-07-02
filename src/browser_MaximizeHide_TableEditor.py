@@ -156,7 +156,8 @@ def my_toggle_sidebar(self):
 def onSetupMenus(self):
     # self is browser
     m = getMenu(self, "&View")
-
+    if not hasattr(self, "menuView"):
+        self.menuView = m
     #a.setCheckable(True)/a.toggled.connect(self.toggleTableAndSidebar) and maybe a.setChecked(True)
     #doesn't offer benefits here: you don't need visual feedbar in the menu
     #to see if the table view is hidden ...
