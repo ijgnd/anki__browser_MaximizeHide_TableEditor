@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from aqt.browser import Browser
 from anki.hooks import addHook, wrap
-from anki.lang import _
+from anki.utils import pointVersion
 from aqt.gui_hooks import (
     browser_menus_did_init,
 
@@ -61,14 +61,20 @@ def mysetupTable(self):
         if bool(val):
             val = 20
         self.form.splitter.setHandleWidth(val)
-Browser.setupTable = wrap(Browser.setupTable, mysetupTable, "before")
+if pointVersion() < 45:
+    Browser.setupTable = wrap(Browser.setupTable, mysetupTable, "before")
+else:
+    Browser.setup_table = wrap(Browser.setup_table, mysetupTable, "before")  
 
 
 def my_toggle_notes_only(self, arg):
-    self.model.beginReset()
-    mw.col.set_config("advbrowse_uniqueNote", arg)
-    self.onSearchActivated()
-    self.model.endReset()
+    if pointVersion() < 45:
+        self.model.beginReset()
+        mw.col.set_config("advbrowse_uniqueNote", arg)
+        self.onSearchActivated()
+        self.model.endReset()
+    else:
+        self.on_table_state_changed(False)
 
 
 def get_splitter_dimension(self):
