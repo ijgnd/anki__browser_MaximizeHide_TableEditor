@@ -115,8 +115,8 @@ def table_only(self):
     if self.sidebarDockWidget.isVisible():
         self.sidebarDockWidget.setVisible(False)
     #works but can't resize manually
-    #self.form.fieldsArea.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-    #self.form.widget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+    #self.form.fieldsArea.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+    #self.form.widget.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 
     #works but can't resize manually
     #self.form.fieldsArea.setFixedHeight(1)
