@@ -155,6 +155,8 @@ def back_to_default(self):
 def my_toggle_sidebar(self):
     if not self.sidebarDockWidget.isVisible():
         self.sidebarDockWidget.setVisible(True)
+        if pointVersion() >= 45:
+            self.mw.progress.timer(10, self.sidebar.refresh, False)
     else:
         self.sidebarDockWidget.setVisible(False)
 
